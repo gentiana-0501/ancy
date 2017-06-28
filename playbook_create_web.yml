@@ -1,0 +1,40 @@
+- name: Create Web servers
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars_files:
+    - var.yml
+  tasks:
+        - name: Launch instance A
+          ec2: 
+                aws_access_key: "{{ aws_access_key }}"
+                aws_secret_key: "{{ aws_secret_key }}"
+                keypair: "{{ keypair }}"
+                group_id: "{{ group_id }}"
+                instance_type: "{{ instance_type }}"
+                image: "{{ image }}"
+                wait: yes
+                region: "{{ region }}"
+                vpc_subnet_id: "{{ BossA }}"
+                assign_public_ip: yes
+                instance_tags:
+                  Name: '{"kobayashiryutaro-web-20170628"}'
+                  Role: '{"web01"}'
+          register: ec2
+
+        - name: Launch instance B
+          ec2:
+                aws_access_key: "{{ aws_access_key }}"
+                aws_secret_key: "{{ aws_secret_key }}"
+                keypair: "{{ keypair }}"
+                group_id: "{{ group_id }}"
+                instance_type: "{{ instance_type }}"
+                image: "{{ image }}"
+                wait: yes
+                region: "{{ region }}"
+                vpc_subnet_id: "{{ BossB }}"
+                assign_public_ip: yes
+                instance_tags:
+                  Name: '{"kobayashiryutaro-web-20170628"}'
+                  Role: '{"web02"}'
+          register: ec2

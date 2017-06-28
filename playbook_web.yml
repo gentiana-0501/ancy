@@ -1,0 +1,25 @@
+- name: Bossweb
+  hosts: webservers
+  remote_user: centos
+  become: yes
+  become_method: sudo
+  vars_files:
+    - var.yml
+  tasks:
+        - name: http install
+          yum: name=httpd state=installed
+
+        - name: copy r_proxy.confA
+          copy: 
+            src: /home/centos/configs/r_proxy.confA
+            dest: /etc/httpd/conf.d/r_proxy.conf
+          when: inventory_hostname in groups ['web-a']
+
+        - name: copy r_proxy.confB
+          copy: 
+            src: /home/centos/configs/r_proxy.confB
+            dest: /etc/httpd/conf.d/r_proxy.conf
+          when: inventory_hostname in groups ['web-b']
+
+        - name: httpd restart
+          service: name=httpd state=restarted enabled=yes

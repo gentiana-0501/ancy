@@ -1,0 +1,3 @@
+- name: AP setup
+  hosts: APservers
+  remote_user: centos
