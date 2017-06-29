@@ -1,0 +1,95 @@
+- name: DB dump and Repconf
+  hosts: DBservers
+  remote_user: centos
+  become: yes
+  become_method: sudo
+  gather_facts: no
+  vars_files:
+    - var.yml
+  tasks:
+        - name: master my.cnf append
+          lineinfile:
+            dest: /etc/my.cnf
+            insertafter: "^\\[mysqld\\]$"
+            line: "{{ item }}"
+          with_items:
+            - log-bin=mysql-bin
+            - server-id=101
+          when: inventory_hostname in groups ['master']
+
+        - name: slaves my.cnf append
+          lineinfile:
+            dest: /etc/my.cnf
+            insertafter: "^\\[mysqld\\]$"
+            line: "{{ item }}"
+          with_items:
+            - log-bin=mysql-bin
+            - server-id=102
+            - read_only=1
+            - report-host=ip-10-0-1-71
+          when: inventory_hostname in groups ['slaves']
+
+        - name: mariadb restart
+          service: 
+            name: mariadb
+            state: restarted
+
+        - name: add rep_user
+          mysql_user:
+            login_password: "{{ sqlpass }}"
+            name: rep_user
+            password: "{{ password }}"
+            priv: '*.*:ALL,GRANT'
+            state: present
+          when: inventory_hostname in groups ['master']
+  
+        - name: Create dump file
+          mysql_db:
+            login_password: "{{ sqlpass }}"
+            state: dump
+            name: all
+            target: /tmp/master.sql
+          when: inventory_hostname in groups ['master']
+
+        - name: fetch dump file
+          fetch:
+            src: /tmp/master.sql
+            dest: /home/centos/configs/master.sql
+            flat: yes
+          when: inventory_hostname in groups ['master']
+
+        - name: copy dump file
+          copy:
+            src: /home/centos/configs/master.sql
+            dest: /tmp/master.sql
+          when: inventory_hostname in groups ['slaves']
+
+        - name: check status of slaves
+          mysql_replication: 
+            mode: getslave
+          ignore_errors: true
+          register: slave_status
+          when: inventory_hostname in groups ['slaves']
+
+        - name: stop replication
+          mysql_replication: 
+            login_password: "{{ sqlpass }}"
+            mode: stopslave
+          when: inventory_hostname in groups ['slaves'] and (slave_status|failed or slave_status.Slave_SQL_Running != "Yes")
+
+        - name: import dump file
+          mysql_db:
+            login_password: "{{ sqlpass }}"
+            name: all
+            state: import
+            target: /tmp/master.sql
+          when: inventory_hostname in groups ['slaves'] and (slave_status|failed or slave_status.Slave_SQL_Running != "Yes")
+
+        - name: change master
+          mysql_replication:
+            login_password: "{{ sqlpass }}"
+            mode: changemaster
+            master_host: "10.0.0.107"
+            master_user: "rep_user"
+            master_password: "{{ password }}"
+          when: inventory_hostname in groups ['slaves'] and (slave_status|failed or slave_status.Slave_SQL_Running != "Yes")
