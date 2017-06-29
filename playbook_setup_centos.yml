@@ -24,6 +24,7 @@
             - centos-release-scl
             - http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
             - http://repo.zabbix.com/zabbix/3.2/rhel/7/x86_64/zabbix-release-3.2-1.el7.noarch.rpm
+            - python-pip
 
         - name: tools install
           yum: name={{ item }} state=installed
@@ -32,6 +33,9 @@
             - wget
             - unzip
             - zabbix-agent
+
+        - name: pexpect install
+          pip: name=pexpect state=present
 
         - name: zabbix-agent setup
           replace:

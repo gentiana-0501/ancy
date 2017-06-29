@@ -1,3 +1,43 @@
 - name: AP setup
   hosts: APservers
   remote_user: centos
+  become: yes
+  become_method: sudo
+  tasks:
+        - name: http install
+          yum: name=httpd state=installed
+
+        - name: php install
+          yum: name={{ item }} state=installed
+            with_items:
+              - php
+              - php-mysql
+              - php-mbstring
+
+        - name: Wordpress install
+          get_url: 
+            url: "http://ja.wordpress.org/latest-ja.tar.gz"
+            dest: /home/centos
+
+        - name: get stat
+          stat: path=/var/www/html/index.php
+          register: wp
+
+        - name: wp open
+          shell: tar -xzvf /home/centos/wordpress*
+          when: not wp.stat.exists
+
+        - name: wp mv
+          shell: mv /home/centos/wordpress/*
+          when: not wp.stat.exists
+
+        - name: copy wp-config.php
+          copy: 
+            src: /home/centos/configs/wp-config.php
+            dest: /var/www/html
+
+        - name: Owner change
+          command: chown apache:apache /var/www/html -R
+
+        - name: Apache restart
+          service: name=httpd enabled=yes
