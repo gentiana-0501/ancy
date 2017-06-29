@@ -1,0 +1,33 @@
+- name: Create DB servers
+  hosts: DBservers
+  remote_user: centos
+  gather_facts: no
+  become: yes
+  become_method: sudo
+  vars_files:
+    - var.yml
+  tasks:
+        - name: install mariadb
+          yum: name=mariadb-server state=installed
+
+        - name: set utf8
+          lineinfile:
+            dest: /etc/my.cnf
+            insertafter: "^[mysqld]$"
+            line: "character-set-server=utf8"
+
+        - name: mariadb start
+          service: name=mariadb state=started enabled=yes
+
+        - name: mysql_secure_installation
+          expect:
+            command: mysql_secure_installation
+            responses:
+              "Enter current password for root \\(enter for none\\):" : ""
+              "Set root password\\? \\[Y\\/n\\]" : "y"
+              "New password:" : "{{ password }}"
+              "Re-enter new password:" : "{{ password}}"
+              "Remove anonymous users\\? \\[Y\\/n\\]" : "y"
+              "Disallow root login remotely\\? \\[Y\\/n\\]" : "y"
+              "Remove test database and access to it\\? \\[Y\\/n\\]" : "y"
+              "Reload privilege tables now\\? \\[Y\\/n\\]" : "y"
