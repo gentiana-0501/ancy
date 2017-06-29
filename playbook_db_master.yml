@@ -1,0 +1,22 @@
+- name: Create WPdatabase
+  hosts: master
+  remote_user: centos
+  become: yes
+  become_method: sudo
+  gather_facts: no
+  vars_files:
+    - var.yml
+  tasks:
+        - name: Create database
+          mysql_db:
+            login_password: "{{ sqlpass }}"
+            name: wp
+            state: present
+
+        - name: Add user
+          mysql_user: 
+            login_password: "{{ sqlpass }}"
+            name: wp_user
+            password: "{{ password }}"
+            priv: '*.*:ALL,GRANT'
+            state: present
